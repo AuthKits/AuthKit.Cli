@@ -1,5 +1,5 @@
 ﻿using AuthKit.Cli.Commands;
-using AuthKit.Cli.Interfaces;
+using AuthKit.Cli.Services;
 using AuthKit.Cli.Spectre;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console.Cli;
@@ -15,12 +15,24 @@ public sealed class ConsoleApp(IServiceCollection services)
         
         var registrar = new TypeRegistrar(services);
         var app = new CommandApp(registrar);
-       
-        app.Configure(cfg =>
+        var grouper = new CommandGrouper();
+        
+        app.Configure(config =>
         {
-            cfg.PropagateExceptions();
-            TestCommand.Configure(cfg);
+            config.PropagateExceptions();
+            config.SetHelpProvider(new CustomHelpProvider(config.Settings, grouper));
+            TestCommand.Configure(config);
+            
+            config.AddBranch<AddSettings>("add", add =>
+            {
+                add.SetDescription("Commands for adding packages or references");
+                add.AddCommand<AddPackageCommand>("package")
+                    .WithDescription("Add a package to the project");
+                add.AddCommand<AddReferenceCommand>("reference")
+                    .WithDescription("Add a reference to the project");
+            });
         });
+       
         app.Run(args);
     }
 }
